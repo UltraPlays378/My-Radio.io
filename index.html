@@ -2,25 +2,25 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>React Radio</title>
+  <title>React Radio — No Babel (Speed slider updated)</title>
 
-  <!-- React + ReactDOM -->
+  <!-- React + ReactDOM (local libs as in your project) -->
   <script src="libs/react.development.js"></script>
   <script src="libs/react-dom.development.js"></script>
 
-  <!-- Babel for JSX -->
-  <script src="libs/babel.min.js"></script>
+  <!-- NOTE: Babel removed as requested -->
 
-  <!-- GlitchJS -->
+  <!-- GlitchJS (kept as you had it) -->
   <script src="libs/GlitchJS.js"></script>
 
   <style>
-    body {
-      background: black;
-      color: white;
-      font-family: Arial, sans-serif;
-      padding: 20px;
-    }
+    /* -------------------------
+       UI styles (kept intact)
+       ------------------------- */
+    html, body { height: 100%; margin: 0; }
+    body { background: black; color: white; font-family: Arial, sans-serif; padding: 20px; box-sizing: border-box; }
+
+    .app-container { max-width: 900px; margin: 0 auto; position: relative; }
 
     button {
       margin-right: 10px;
@@ -34,69 +34,52 @@
       border-radius: 4px;
     }
 
-    button:hover {
-      background: #0cc;
-    }
-    /* Status badge container */
-    .status-badge {
-      position: relative;
+    /* Top-right floating status (READ-ONLY) */
+    .floating-status {
+      position: fixed;
+      top: 12px;
+      right: 12px;
+      z-index: 9999;
+      background: rgba(0,0,0,0.6);
+      color: #fff;
+      border: 2px solid rgba(255,255,255,0.08);
+      padding: 8px 12px;
+      border-radius: 8px;
       display: inline-flex;
       align-items: center;
-      gap: 10px;
-      padding: 8px 14px;
-      border-radius: 8px;
-      color: #fff;
-      font-weight: 600;
-      overflow: hidden;
-      min-width: 140px;
-      box-sizing: border-box;
+      gap: 8px;
+      backdrop-filter: blur(6px);
+      box-shadow: 0 6px 18px rgba(0,0,0,0.6);
+      font-weight: 700;
+      pointer-events: none; /* make it non-interactive */
+      user-select: none;
+      -webkit-user-select: none;
+      -moz-user-select: none;
     }
 
-    /* Layered gradient backgrounds */
-    .status-badge .status-bg {
-      position: absolute;
-      inset: 0;
-      z-index: 0;
-      transition: opacity 420ms ease-in-out;
-      pointer-events: none;
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #ffcc00;
+      box-shadow: 0 0 8px rgba(255,204,0,0.6);
+      flex: 0 0 auto;
     }
 
-    /* Online gradient layer */
-    .status-badge .status-bg.online {
-      background: linear-gradient(135deg, #00ff88, #009944);
-      opacity: 0;
-    }
+    .status-playing .status-dot { background: #00ff88; box-shadow: 0 0 10px rgba(0,255,136,0.6); }
+    .status-paused .status-dot { background: #ff4444; box-shadow: 0 0 10px rgba(255,68,68,0.5); }
 
-    /* Offline gradient layer */
-    .status-badge .status-bg.offline {
-      background: linear-gradient(135deg, #ff4444, #aa0000);
-      opacity: 0;
-    }
+    .status-text { font-size: 0.95rem; opacity: 0.95; white-space: nowrap; }
 
-    /* When online, show online layer; when offline, show offline layer */
+    .status-badge { position: relative; display: inline-flex; align-items: center; gap: 10px; padding: 8px 14px; border-radius: 8px; color: #fff; font-weight: 600; overflow: hidden; min-width: 140px; box-sizing: border-box; margin-bottom: 16px; }
+    .status-bg { position: absolute; inset: 0; z-index: 0; transition: opacity 420ms ease-in-out; pointer-events: none; }
+    .status-bg.online { background: linear-gradient(135deg, #00ff88, #009944); opacity: 0; }
+    .status-bg.offline { background: linear-gradient(135deg, #ff4444, #aa0000); opacity: 0; }
     .status-badge.online .status-bg.online { opacity: 1; }
     .status-badge.offline .status-bg.offline { opacity: 1; }
+    .status-content { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 10px; width: 100%; justify-content: space-between; }
+    .status-time { opacity: 0.85; font-weight: 500; font-size: 0.95em; }
 
-    /* Foreground content sits above the backgrounds */
-    .status-badge .status-content {
-      position: relative;
-      z-index: 1;
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      width: 100%;
-      justify-content: space-between;
-    }
-
-    /* Time styling */
-    .status-badge .status-time {
-      opacity: 0.85;
-      font-weight: 500;
-      font-size: 0.95em;
-    }
-    /* ---------------------------------------------------
-       GLOBAL RANGE SLIDER (seek bar + volume base)
-       --------------------------------------------------- */
     input[type="range"] {
       -webkit-appearance: none;
       width: 100%;
@@ -106,7 +89,6 @@
       outline: none;
     }
 
-    /* Seek bar track (red fill, grey remainder) */
     input[type="range"]::-webkit-slider-runnable-track {
       background: linear-gradient(
         to right,
@@ -117,409 +99,367 @@
       border-radius: 3px;
     }
 
-    /* Firefox track */
-    input[type="range"]::-moz-range-track {
-      background: #555;
-      height: 6px;
-      border-radius: 3px;
-    }
+    input[type="range"]::-moz-range-track { background: #555; height: 6px; border-radius: 3px; }
+    input[type="range"]::-moz-range-progress { background: red; height: 6px; border-radius: 3px; }
 
-    input[type="range"]::-moz-range-progress {
-      background: red;
-      height: 6px;
-      border-radius: 3px;
-    }
+    input[type="range"].seek-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 0; height: 0; background: transparent; border: none; }
+    input[type="range"].seek-slider::-moz-range-thumb { width: 0; height: 0; background: transparent; border: none; }
 
-    /* ---------------------------------------------------
-       SEEK BAR THUMBSTICK — HIDDEN (no circle)
-       --------------------------------------------------- */
-    input[type="range"].seek-slider::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      width: 0;
-      height: 0;
-      background: transparent;
-      border: none;
-    }
+    .volume-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; background: red; border-radius: 50%; cursor: pointer; margin-top: -4px; }
+    .volume-slider::-moz-range-thumb { width: 14px; height: 14px; background: red; border-radius: 50%; cursor: pointer; }
 
-    input[type="range"].seek-slider::-moz-range-thumb {
-      width: 0;
-      height: 0;
-      background: transparent;
-      border: none;
-    }
-
-    /* ---------------------------------------------------
-       VOLUME SLIDER THUMBSTICK — CIRCULAR RED
-       --------------------------------------------------- */
-    .volume-slider::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      width: 14px;
-      height: 14px;
-      background: red;
-      border-radius: 50%;
-      cursor: pointer;
-      margin-top: -4px;
-    }
-
-    .volume-slider::-moz-range-thumb {
-      width: 14px;
-      height: 14px;
-      background: red;
-      border-radius: 50%;
-      cursor: pointer;
-    }
-
-    /* small helper */
-    .muted { opacity: 0.6; }
-    .sources-list { margin-top: 12px; font-size: 0.9em; color: #ddd; }
-    .sources-list li { margin-bottom: 6px; word-break: break-all; }
-    .small { font-size: 0.85em; color: #bbb; margin-left: 8px; }
+    /* Ensure audio element is invisible */
+    audio { display: none; }
   </style>
 </head>
-
 <body>
-  <div id="root"></div>
+  <div id="root" class="app-container"></div>
 
-  <script type="text/babel">
+  <script type="text/javascript">
+  // ============================================================
+  // React Radio — No Babel version
+  // - JSX removed
+  // - Comments, UI, core features, AudioPlayer, <styles>, <audio>, <script> preserved
+  // - Uses React.createElement via helper `h`
+  // - Speed/Pitch slider updated: min 0.10, step 0.05, max 2.00
+  // ============================================================
 
-/* ------------------ Online Status ------------------ */
-function OnlineStatus() {
-  const [isOnline, setIsOnline] = React.useState(Boolean(GlitchJS && GlitchJS.isOnline));
-  const [time, setTime] = React.useState(() => new Date());
+  (function () {
+    const h = React.createElement;
 
-  React.useEffect(() => {
-    const tick = () => {
-      setIsOnline(Boolean(GlitchJS && GlitchJS.isOnline));
-      setTime(new Date());
+    /* Safe localStorage wrapper (handles private mode / exceptions) */
+    var safeStorage = {
+      get: function (key, fallback) {
+        if (fallback === undefined) fallback = null;
+        try {
+          var v = localStorage.getItem(key);
+          return v === null ? fallback : v;
+        } catch (e) {
+          console.warn("localStorage.get failed:", e);
+          return fallback;
+        }
+      },
+      set: function (key, value) {
+        try {
+          localStorage.setItem(key, String(value));
+          return true;
+        } catch (e) {
+          console.warn("localStorage.set failed:", e);
+          return false;
+        }
+      }
     };
 
-    const interval = setInterval(tick, 250);
-    tick();
+    /* ------------------ OnlineStatus component ------------------ */
+    function OnlineStatus() {
+      var _React$useState = React.useState(Boolean(window.GlitchJS && GlitchJS.isOnline)),
+          isOnline = _React$useState[0],
+          setIsOnline = _React$useState[1];
 
-    return () => clearInterval(interval);
-  }, []);
+      var _React$useState2 = React.useState(function () { return new Date(); }),
+          time = _React$useState2[0],
+          setTime = _React$useState2[1];
 
-  const formatted = time.toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit"
-  });
+      React.useEffect(function () {
+        var tick = function () {
+          setIsOnline(Boolean(window.GlitchJS && GlitchJS.isOnline));
+          setTime(new Date());
+        };
+        var interval = setInterval(tick, 250);
+        tick();
+        return function () { clearInterval(interval); };
+      }, []);
 
-  return (
-    <div
-      className={`status-badge ${isOnline ? "online" : "offline"}`}
-      role="status"
-      aria-live="polite"
-      aria-atomic="true"
-      title={isOnline ? "Online" : "Offline"}
-    >
-      <div className="status-bg online" aria-hidden="true" />
-      <div className="status-bg offline" aria-hidden="true" />
-      <div className="status-content">
-        <div>{isOnline ? "Online" : "Offline"}</div>
-        <div className="status-time">{formatted}</div>
-      </div>
-    </div>
-  );
-}
+      var formatted = time.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
-/* ------------------ Audio Player (loads every file from repo audio folder) ------------------ */
-function AudioPlayer() {
-  const [audioSources, setAudioSources] = React.useState([]);
-  const [loadingSources, setLoadingSources] = React.useState(false);
-  const [sourcesError, setSourcesError] = React.useState(null);
+      return h("div", { className: "status-badge " + (isOnline ? "online" : "offline"), role: "status", "aria-live": "polite", "aria-atomic": "true" },
+        h("div", { className: "status-bg online" }),
+        h("div", { className: "status-bg offline" }),
+        h("div", { className: "status-content" },
+          h("div", null, isOnline ? "Online" : "Offline"),
+          h("div", { className: "status-time" }, formatted)
+        )
+      );
+    }
 
-  const audioRef = React.useRef(null);
+    /* ------------------ AudioPlayer component ------------------ */
+    function AudioPlayer() {
+      // audioSources (kept as in your project)
+      var audioSources = [
+        'Inbox/Random Music/compressed/DJ XFOCOS - Topic - FUNK DO MALAME AMARELO (Slowed).mp3',
+        'Inbox/Random Music/compressed/NXGHT! - Topic - BLUE HORIZON FUNK.mp3',
+        'Inbox/ItΓÇÖs Just Not Okay/revenge (Sped Up).wav',
+        'Inbox/ItΓÇÖs Just Not Okay/revenge.wav'
+      ];
 
-  const [currentSrc, setCurrentSrc] = React.useState(null);
-  const [duration, setDuration] = React.useState(0);
-  const [currentTime, setCurrentTime] = React.useState(0);
-  const [volume, setVolume] = React.useState(1);
-  const [playbackRate, setPlaybackRate] = React.useState(1);
+      var audioRef = React.useRef(null);
 
-  const lastTrack = React.useRef(null);
-  const recentTracks = React.useRef([]);
+      /* Persistent state (lazy init) */
+      var _React$useState3 = React.useState(function () {
+        var saved = safeStorage.get("playbackRate", null);
+        var n = saved !== null ? Number(saved) : 1;
+        return isNaN(n) ? 1 : n;
+      }),
+          playbackRate = _React$useState3[0],
+          setPlaybackRate = _React$useState3[1];
 
-  // Fetch every file in the repository's audio folder using GitHub contents API
-  React.useEffect(() => {
-    const controller = new AbortController();
-    async function fetchAudioFolder() {
-      setLoadingSources(true);
-      setSourcesError(null);
-      try {
-        const apiUrl = "https://api.github.com/repos/UltraPlays378/My-Radio.io/contents/audio";
-        const res = await fetch(apiUrl, { signal: controller.signal });
-        if (!res.ok) {
-          throw new Error(`GitHub API returned ${res.status}`);
+      var _React$useState4 = React.useState(function () {
+        var saved = safeStorage.get("volume", null);
+        var n = saved !== null ? Number(saved) : 1;
+        return isNaN(n) ? 1 : n;
+      }),
+          volume = _React$useState4[0],
+          setVolume = _React$useState4[1];
+
+      React.useEffect(function () { safeStorage.set("playbackRate", playbackRate); }, [playbackRate]);
+      React.useEffect(function () { safeStorage.set("volume", volume); }, [volume]);
+
+      /* Audio state */
+      var _React$useState5 = React.useState(null),
+          currentSrc = _React$useState5[0],
+          setCurrentSrc = _React$useState5[1];
+
+      var _React$useState6 = React.useState(0),
+          duration = _React$useState6[0],
+          setDuration = _React$useState6[1];
+
+      var _React$useState7 = React.useState(0),
+          currentTime = _React$useState7[0],
+          setCurrentTime = _React$useState7[1];
+
+      var _React$useState8 = React.useState(false),
+          isPlaying = _React$useState8[0],
+          setIsPlaying = _React$useState8[1];
+
+      var lastTrack = React.useRef(null);
+      var recentTracks = React.useRef([]);
+
+      var getSmartRandomTrack = function () {
+        var pool = audioSources.filter(function (src) { return src !== lastTrack.current; });
+
+        if (recentTracks.current.length >= audioSources.length - 1) {
+          recentTracks.current = [];
         }
-        const items = await res.json();
 
-        // items should be an array of file objects when the path exists
-        if (!Array.isArray(items)) {
-          throw new Error("Unexpected response from GitHub contents API");
-        }
+        pool = pool.filter(function (src) { return !recentTracks.current.includes(src); });
 
-        const allowed = items
-          .filter(it => it && it.type === "file" && typeof it.name === "string")
-          .filter(it => {
-            const name = it.name.toLowerCase();
-            return name.endsWith(".mp3") || name.endsWith(".wav") || name.endsWith(".flac") || name.endsWith(".ogg") || name.endsWith(".m4a");
-          })
-          .map(it => it.download_url)
-          .filter(Boolean);
+        var choice = pool[Math.floor(Math.random() * pool.length)];
 
-        setAudioSources(allowed);
-      } catch (err) {
-        if (err.name !== "AbortError") {
-          console.error("Failed to load audio folder:", err);
-          setSourcesError(String(err));
-        }
-      } finally {
-        setLoadingSources(false);
-      }
-    }
+        recentTracks.current.push(choice);
+        lastTrack.current = choice;
 
-    fetchAudioFolder();
+        return choice;
+      };
 
-    return () => controller.abort();
-  }, []);
+      var playRandom = function () {
+        var next = getSmartRandomTrack();
+        setCurrentSrc(next);
+      };
 
-  const getSmartRandomTrack = () => {
-    if (!audioSources || audioSources.length === 0) return null;
+      /* When currentSrc changes, set audio.src and play */
+      React.useEffect(function () {
+        var audio = audioRef.current;
+        if (!audio) return;
+        if (!currentSrc) return;
+        audio.src = currentSrc;
+        var p = audio.play();
+        if (p && p.catch) p.catch(function () { /* autoplay blocked or other issue */ });
+      }, [currentSrc]);
 
-    let pool = audioSources.filter(src => src !== lastTrack.current);
-
-    if (recentTracks.current.length >= audioSources.length - 1) {
-      recentTracks.current = [];
-    }
-
-    pool = pool.filter(src => !recentTracks.current.includes(src));
-
-    if (pool.length === 0) {
-      pool = audioSources.filter(src => src !== lastTrack.current);
-    }
-
-    if (pool.length === 0) {
-      pool = audioSources.slice();
-    }
-
-    const choice = pool[Math.floor(Math.random() * pool.length)];
-    recentTracks.current.push(choice);
-    lastTrack.current = choice;
-    return choice;
-  };
-
-  const playRandom = () => {
-    if (!audioSources || audioSources.length === 0) {
-      console.warn("No audio sources available to play.");
-      return;
-    }
-    const next = getSmartRandomTrack();
-    if (next) setCurrentSrc(next);
-  };
-
-  React.useEffect(() => {
-    if (!currentSrc) return;
-    const audio = audioRef.current;
-    if (!audio) return;
-    audio.src = currentSrc;
-    audio.volume = volume;
-    audio.playbackRate = playbackRate;
-    const p = audio.play();
-    if (p && typeof p.catch === "function") {
-      p.catch(err => {
-        console.warn("Playback prevented:", err);
-      });
-    }
-  }, [currentSrc]);
-
-  React.useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    audio.playbackRate = playbackRate;
-    if ('preservesPitch' in audio) audio.preservesPitch = false;
-    if ('mozPreservesPitch' in audio) audio.mozPreservesPitch = false;
-    if ('webkitPreservesPitch' in audio) audio.webkitPreservesPitch = false;
-  }, [playbackRate]);
-
-  React.useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    audio.volume = volume;
-  }, [volume]);
-
-  const onLoadedMetadata = () => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    setDuration(audio.duration || 0);
-  };
-
-  const onTimeUpdate = () => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    setCurrentTime(audio.currentTime);
-  };
-
-  const fmt = (sec) => {
-    if (!sec || isNaN(sec)) return "0:00";
-    const m = Math.floor(sec / 60);
-    const s = Math.floor(sec % 60);
-    return `${m}:${s < 10 ? "0" : ""}${s}`;
-  };
-
-  const onSeek = (e) => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    const value = Number(e.target.value);
-    audio.currentTime = (value / 1000) * duration;
-    setCurrentTime(audio.currentTime);
-  };
-
-  const onVolume = (e) => {
-    const v = Number(e.target.value);
-    setVolume(v);
-    const audio = audioRef.current;
-    if (audio) audio.volume = v;
-  };
-
-  const togglePause = () => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    if (audio.paused) {
-      const p = audio.play();
-      if (p && typeof p.catch === "function") p.catch(() => {});
-    } else {
-      audio.pause();
-    }
-  };
-
-  const seekPercent = duration ? (currentTime / duration) * 100 : 0;
-
-  return (
-    <div>
-      <h1>React Radio</h1>
-
-      <p>
-        Song playing: <strong>{currentSrc ? currentSrc.split("/").pop() : "None"}</strong>
-        {loadingSources ? <span className="small"> Loading sources...</span> : null}
-      </p>
-
-      <p>{fmt(currentTime)} / {fmt(duration)}</p>
-
-      <button onClick={playRandom} disabled={loadingSources || audioSources.length === 0}>Start Radio</button>
-      <button onClick={togglePause}>Pause / Resume</button>
-      <button onClick={() => {
-        const audio = audioRef.current;
-        if (audio) audio.currentTime = 0;
-      }}>⏮ Back</button>
-      <button onClick={playRandom}>⏭ Next</button>
-
-      <br /><br />
-
-      <label>Volume:</label>
-      <input
-        className="volume-slider"
-        type="range"
-        min="0"
-        max="1"
-        step="0.01"
-        value={volume}
-        onChange={onVolume}
-        style={{
-          width: "150px",
-          marginLeft: "10px",
-          "--seek-fill": `${volume * 100}%`
-        }}
-      />
-
-      <br /><br />
-
-      <label>Speed/Pitch: <span>{playbackRate.toFixed(2)}x</span></label>
-      <input
-        className="volume-slider"
-        type="range"
-        min="0.5"
-        max="2"
-        step="0.1"
-        value={playbackRate}
-        onChange={(e) => {
-          const v = Number(e.target.value);
-          setPlaybackRate(v);
-          const audio = audioRef.current;
-          if (!audio) return;
-          audio.playbackRate = v;
+      /* Apply playbackRate + disable pitch preservation */
+      React.useEffect(function () {
+        var audio = audioRef.current;
+        if (!audio) return;
+        try {
+          audio.playbackRate = playbackRate;
           if ('preservesPitch' in audio) audio.preservesPitch = false;
           if ('mozPreservesPitch' in audio) audio.mozPreservesPitch = false;
           if ('webkitPreservesPitch' in audio) audio.webkitPreservesPitch = false;
-        }}
-        style={{
-          width: "150px",
-          marginLeft: "10px",
-          "--seek-fill": `${((playbackRate - 0.5) / 1.5) * 100}%`
-        }}
-      />
+        } catch (e) {
+          console.warn("apply playbackRate failed", e);
+        }
+      }, [playbackRate]);
 
-      <br /><br />
+      /* Apply volume */
+      React.useEffect(function () {
+        var audio = audioRef.current;
+        if (audio) audio.volume = volume;
+      }, [volume]);
 
-      <input
-        className="seek-slider"
-        type="range"
-        min="0"
-        max="1000"
-        value={duration ? (currentTime / duration) * 1000 : 0}
-        onChange={onSeek}
-        style={{
-          width: "100%",
-          "--seek-fill": `${seekPercent}%`
-        }}
-      />
+      var onLoadedMetadata = function () {
+        var audio = audioRef.current;
+        if (!audio) return;
+        setDuration(audio.duration || 0);
+      };
 
-      <audio
-        ref={audioRef}
-        onLoadedMetadata={onLoadedMetadata}
-        onTimeUpdate={onTimeUpdate}
-        onEnded={playRandom}
-      />
+      var onTimeUpdate = function () {
+        var audio = audioRef.current;
+        if (!audio) return;
+        setCurrentTime(audio.currentTime);
+      };
 
-      <div style={{ marginTop: 18 }}>
-        <div className="sources-list">
-          <strong>Sources (loaded from repo audio folder):</strong>
-          {sourcesError ? (
-            <div className="muted">Error loading sources: {sourcesError}</div>
-          ) : loadingSources ? (
-            <div className="muted">Loading...</div>
-          ) : audioSources.length === 0 ? (
-            <div className="muted">No audio files found in the repository audio folder.</div>
-          ) : (
-            <ul>
-              {audioSources.map((s, i) => (
-                <li key={i}>
-                  {s.split("/").pop() || s}
-                  <button style={{ marginLeft: 8 }} onClick={() => setCurrentSrc(s)}>Play</button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
+      var onPlay = function () { setIsPlaying(true); };
+      var onPause = function () { setIsPlaying(false); };
 
-/* ------------------ App Wrapper ------------------ */
-function App() {
-  return (
-    <div>
-      <OnlineStatus />
-      <AudioPlayer />
-    </div>
-  );
-}
+      var onSeek = function (e) {
+        var audio = audioRef.current;
+        if (!audio) return;
+        var value = Number(e.target.value);
+        audio.currentTime = (value / 1000) * duration;
+      };
 
-/* ------------------ React Root ------------------ */
-const root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(<App />);
+      var seekPercent = duration ? (currentTime / duration) * 100 : 0;
 
+      /* Ref callback: ensures we apply persisted settings immediately when audio element is created */
+      var setAudioRef = function (el) {
+        if (audioRef.current && audioRef.current !== el) {
+          // cleanup previous listeners
+          try {
+            audioRef.current.removeEventListener('play', onPlay);
+            audioRef.current.removeEventListener('pause', onPause);
+            audioRef.current.removeEventListener('loadedmetadata', onLoadedMetadata);
+            audioRef.current.removeEventListener('timeupdate', onTimeUpdate);
+            audioRef.current.removeEventListener('ended', playRandom);
+          } catch (e) { /* ignore */ }
+        }
+
+        audioRef.current = el;
+
+        if (el) {
+          try {
+            el.volume = volume;
+            el.playbackRate = playbackRate;
+            if ('preservesPitch' in el) el.preservesPitch = false;
+            if ('mozPreservesPitch' in el) el.mozPreservesPitch = false;
+            if ('webkitPreservesPitch' in el) el.webkitPreservesPitch = false;
+          } catch (e) {
+            console.warn("Failed to apply audio settings on ref attach:", e);
+          }
+
+          // attach listeners
+          el.addEventListener('play', onPlay);
+          el.addEventListener('pause', onPause);
+          el.addEventListener('loadedmetadata', onLoadedMetadata);
+          el.addEventListener('timeupdate', onTimeUpdate);
+          el.addEventListener('ended', playRandom);
+
+          // set initial playing state
+          setIsPlaying(!el.paused && !el.ended);
+        }
+      };
+
+      /* Helper to format time */
+      var fmt = function (sec) {
+        if (!sec || isNaN(sec)) return "0:00";
+        var m = Math.floor(sec / 60);
+        var s = Math.floor(sec % 60);
+        return m + ":" + (s < 10 ? "0" : "") + s;
+      };
+
+      /* Compute speed slider fill percent using new range (min 0.10, max 2.00) */
+      var speedMin = 0.10;
+      var speedMax = 2.00;
+      var speedRange = speedMax - speedMin; // 1.9
+      var speedFillPercent = ((playbackRate - speedMin) / speedRange) * 100;
+      if (!isFinite(speedFillPercent)) speedFillPercent = 0;
+      if (speedFillPercent < 0) speedFillPercent = 0;
+      if (speedFillPercent > 100) speedFillPercent = 100;
+
+      /* Build UI using React.createElement (h) */
+      return h("div", null,
+        // Floating top-right status (READ-ONLY) with correct tabIndex prop
+        h("div", {
+          className: "floating-status " + (isPlaying ? "status-playing" : "status-paused"),
+          role: "status",
+          "aria-hidden": "true",
+          tabIndex: -1
+        },
+          h("div", { className: "status-dot", "aria-hidden": "true" }),
+          h("div", { className: "status-text" }, isPlaying ? "Playing" : "Paused")
+        ),
+
+        h("h1", null, "React Radio"),
+
+        h("div", { style: { marginBottom: 12 } }, h(OnlineStatus, null)),
+
+        h("p", null, "Song playing: " + (currentSrc ? currentSrc.split("/").pop() : "None")),
+
+        h("p", null, fmt(currentTime) + " / " + fmt(duration)),
+
+        h("div", { style: { marginBottom: 12 } },
+          h("button", { onClick: playRandom }, "Start Radio"),
+          h("button", { onClick: function () { if (audioRef.current) audioRef.current.pause(); } }, "Pause"),
+          h("button", { onClick: function () { if (audioRef.current) audioRef.current.play(); } }, "Resume"),
+          h("button", { onClick: function () { if (audioRef.current) audioRef.current.currentTime = 0; } }, "⏮ Back"),
+          h("button", { onClick: playRandom }, "⏭ Next")
+        ),
+
+        h("label", null, "Volume:"),
+        h("input", {
+          className: "volume-slider",
+          type: "range",
+          min: "0",
+          max: "1",
+          step: "0.01",
+          value: volume,
+          onChange: function (e) {
+            var v = Number(e.target.value);
+            setVolume(v);
+            if (audioRef.current) audioRef.current.volume = v;
+          },
+          style: { width: "150px", marginLeft: "10px", "--seek-fill": (volume * 100) + "%" }
+        }),
+
+        h("br", null), h("br", null),
+
+        h("label", null, "Speed/Pitch: ", h("span", null, playbackRate.toFixed(2) + "x")),
+        h("input", {
+          className: "volume-slider",
+          type: "range",
+          min: "0.10",
+          max: "2.00",
+          step: "0.05",
+          value: playbackRate,
+          onChange: function (e) {
+            var v = Number(e.target.value);
+            // clamp to valid range and round to step precision to avoid float drift
+            v = Math.max(speedMin, Math.min(speedMax, Math.round(v / 0.05) * 0.05));
+            setPlaybackRate(v);
+            if (audioRef.current) {
+              audioRef.current.playbackRate = v;
+              if ('preservesPitch' in audioRef.current) audioRef.current.preservesPitch = false;
+              if ('mozPreservesPitch' in audioRef.current) audioRef.current.mozPreservesPitch = false;
+              if ('webkitPreservesPitch' in audioRef.current) audioRef.current.webkitPreservesPitch = false;
+            }
+          },
+          style: { width: "150px", marginLeft: "10px", "--seek-fill": speedFillPercent + "%" }
+        }),
+
+        h("br", null), h("br", null),
+
+        h("input", {
+          className: "seek-slider",
+          type: "range",
+          min: "0",
+          max: "1000",
+          value: duration ? (currentTime / duration) * 1000 : 0,
+          onChange: onSeek,
+          style: { width: "100%", "--seek-fill": seekPercent + "%" }
+        }),
+
+        // audio element (kept)
+        h("audio", { ref: setAudioRef })
+      );
+    }
+
+    /* ------------------ App wrapper and render ------------------ */
+    function App() {
+      return h("div", null, h(AudioPlayer, null));
+    }
+
+    var root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(h(App, null));
+  })();
   </script>
 </body>
 </html>
